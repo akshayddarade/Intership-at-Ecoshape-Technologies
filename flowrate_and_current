@@ -1,0 +1,54 @@
+#include <Wire.h> 
+#include <TM1637Display.h>
+
+// Grove TM1637 display module connection pins (Digital Pins)
+#define CLK 2
+#define DIO 4
+
+TM1637Display display(CLK, DIO);
+
+volatile float flow_rate; // Measures flow sensor pulses
+float vol = 0.0,l_minute;
+unsigned char flowsensor = 3; // Sensor Input
+unsigned long currentTime;
+unsigned long cloopTime;
+
+void flow () // Interrupt function
+{
+   flow_rate++;
+}
+
+void setup() 
+{
+     display.setBrightness(0x0f);
+     display.showNumberDecEx(l_minute);
+     Serial.begin(9600);
+     
+     pinMode(flowsensor, INPUT);
+   digitalWrite(flowsensor, HIGH); // Optional Internal Pull-Up
+   attachInterrupt(digitalPinToInterrupt(flowsensor), flow, RISING); // Setup Interrupt
+   
+}
+
+void loop() 
+{
+      currentTime = millis();
+   // Every second, calculate and print litres/min
+   if(currentTime >= (cloopTime + 1000))
+   {
+    cloopTime = currentTime; // Updates cloopTime
+    if(flow_rate != 0){
+      // Pulse frequency (Hz) = 73Q, Q is flow rate in L/min.
+      l_minute = (flow_rate / (73)); // (Pulse frequency) / 73Q = flowrate in L/min
+      Serial.print("Rate: ");
+      Serial.print(l_minute);
+      Serial.println(" L/M");
+      l_minute = l_minute/60;
+      flow_rate = 0; // Reset Counter
+      Serial.print(l_minute, DEC); // Print litres/min
+      Serial.println(" L/min");
+    }
+
+    delay(1000);
+   }
+}
